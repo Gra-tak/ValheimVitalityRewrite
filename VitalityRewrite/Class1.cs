@@ -37,8 +37,11 @@ namespace VitalityRewrite
         private static ConfigEntry<float> cfgSwimSpeed;
         private static ConfigEntry<float> cfgCarryWeight;
         private static ConfigEntry<float> cfgJumpHeight;
+        private static ConfigEntry<float> cfgFallDamage;
         private static ConfigEntry<float> cfgTreeLogging;
         private static ConfigEntry<float> cfgPickAxe;
+        private static ConfigEntry<float> cfgSkillGainMultiplier;
+        private static ConfigEntry<float> cfgSkillGainByWorkDamageMultiplier;
 
         private static float skillFactor;
 
@@ -55,7 +58,7 @@ namespace VitalityRewrite
 
         public void Init()
         {
-            _loggingEnabled = Config.Bind("Logging", "Logging Enabled", true, "Enable logging.");
+            _loggingEnabled = Config.Bind("Logging", "Logging Enabled", false, "Enable logging.");
             cfgMaxHealth = Config.Bind("Health", "MaxIncrease", 125f, "Amount of additional max health at vitality skill 100. Additive to other modification.");
             cfgHealthRegen = Config.Bind("Health", "RegenerationIncrease", 100f, "Increase of base health regeneration in percent at vitality skill 100. Implemented by reducing the time between regenerations accordingly. Multiplicative to other modifications.");
             cfgMaxStamina = Config.Bind("Stamina", "MaxIncrease", 40f, "Amount of additional max stamina at vitality skill 100. Additive to other modification.");
@@ -68,9 +71,11 @@ namespace VitalityRewrite
             cfgSwimSpeed = Config.Bind("Speed", "SwimBase", 100f, "Increase of base swimming speed and swimming turning speed at vitality skill 100. Additive to other modification.");
             cfgCarryWeight = Config.Bind("Various", "Carryweight", 400f, "Amount of additional carry weight at vitality skill 100. Additive to other modification.");
             cfgJumpHeight = Config.Bind("Various", "JumpHeight", 10f, "Increase of base jump height in percent at vitality skill 100. Multiplicative to other modifications.");
+            cfgFallDamage = Config.Bind("Various", "FallDamageReduction", 10f, "Reduces the fall height and thus fall damage in percent at vitality skill 100. Multiplicative to other modifications.");
             cfgTreeLogging = Config.Bind("Various", "WoodcuttingIncrease", 25f, "Increase chop damage done to trees in percent at vitality skill 100. Multiplicative to other modifications.");
             cfgPickAxe = Config.Bind("Various", "MiningIncrease", 25f, "Increase pickaxe damage done to stones and ores in percent at vitality skill 100. Multiplicative to other modifications.");
-
+            cfgSkillGainMultiplier = Config.Bind("SkillGain", "GeneralMultiplier", 1f, "Multiplier determining how fast skill is gained. Higher values increase skill gain.");
+            cfgSkillGainByWorkDamageMultiplier = Config.Bind("SkillGain", "WorkDamageMultiplier", 1f, "Multiplier determining how fast skill is gained via damage of your tools. Higher values mean increased skill gain in late game. Be aware, that this is multiplicative with 'GeneralMultiplier' for tool damage.");
             SkillInjector.RegisterNewSkill(skillId, "Vitality", "Increase base stats", 1f, VitalityRewrite.LoadCustomTexture("heart.png"), Skills.SkillType.None);
         }
 
@@ -141,6 +146,32 @@ namespace VitalityRewrite
                 float cfg = cfgRunSpeed.Value;
                 __result += skillFactor * cfg / 100;
                 //Log("Base run speed increased by " + skillFactor * cfg / 100);
+            }
+        }
+
+        [HarmonyPatch(typeof(Character), "UpdateGroundContact")]
+        public static class FallDamageReduction
+        {
+            // Token: 0x06000013 RID: 19 RVA: 0x00002C90 File Offset: 0x00000E90
+            private static void Prefix(Character __instance, ref float ___m_maxAirAltitude, bool ___m_groundContact)
+            {
+                if (!__instance.IsPlayer() || !___m_groundContact)
+                {
+                    return;
+                }
+                float fall = (___m_maxAirAltitude - __instance.transform.position.y);
+                if (fall > 4f) //4 being the magic number in Valheim code from where damage starts
+                {
+                    if (_loggingEnabled.Value)
+                        Log("Fall damage reduced from: " + Mathf.Clamp01((fall - 4f) / 16f) * 100f);
+                    float cfg = cfgFallDamage.Value;
+                    ___m_maxAirAltitude -= fall * skillFactor * cfg / 100;
+                    if (_loggingEnabled.Value)
+                    {
+                        fall = (___m_maxAirAltitude - __instance.transform.position.y);
+                        Log("to: " + Mathf.Clamp01((fall - 4f) / 16f) * 100f);
+                    }
+                }
             }
         }
 
@@ -296,7 +327,7 @@ namespace VitalityRewrite
                 {
                     return;
                 }
-                Increase((Player)__instance, 0.015f);
+                Increase((Player)__instance, 0.15f);
             }
         }
 
@@ -312,7 +343,7 @@ namespace VitalityRewrite
                 Player player = Player.m_localPlayer;
                 float cfg = cfgPickAxe.Value;
                 hit.m_damage.m_pickaxe *= (1.0f + skillFactor * cfg / 100);
-                float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f;
+                float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f * cfgSkillGainByWorkDamageMultiplier.Value;
                 Increase(player,skillGain);
                 Log("(MineRock5) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString()+" damage done: "+ hit.m_damage.m_pickaxe+" skill gain: "+skillGain);
             }
@@ -332,7 +363,7 @@ namespace VitalityRewrite
                 {
                     float cfg = cfgPickAxe.Value;
                     hit.m_damage.m_pickaxe *= (1.0f + skillFactor * cfg / 100);
-                    float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f;
+                    float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f * cfgSkillGainByWorkDamageMultiplier.Value;
                     Increase(player, skillGain);
                     Log("(Destructible) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_pickaxe + " skill gain: " + skillGain);
                 }
@@ -340,7 +371,7 @@ namespace VitalityRewrite
                 {
                     float cfg = cfgTreeLogging.Value;
                     hit.m_damage.m_chop *= (1.0f + skillFactor * cfg / 100);
-                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f;
+                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f * cfgSkillGainByWorkDamageMultiplier.Value;
                     Increase(player, skillGain);
                     Log("(Destructible) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_chop + " skill gain: " + skillGain);
                 }
@@ -362,7 +393,7 @@ namespace VitalityRewrite
                 {
                     float cfg = cfgTreeLogging.Value;
                     hit.m_damage.m_chop *= (1.0f + skillFactor * cfg / 100);
-                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f;
+                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f * cfgSkillGainByWorkDamageMultiplier.Value;
                     Increase(player, skillGain);
                     Log("(TreeBase) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_chop + " skill gain: " + skillGain);
                 }
@@ -384,7 +415,7 @@ namespace VitalityRewrite
                 {
                     float cfg = cfgTreeLogging.Value;
                     hit.m_damage.m_chop *= (1.0f + skillFactor * cfg / 100);
-                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f;
+                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f * cfgSkillGainByWorkDamageMultiplier.Value;
                     Increase(player, skillGain);
                     Log("(TreeLog) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_chop + " skill gain: " + skillGain);
                 }
@@ -402,49 +433,48 @@ namespace VitalityRewrite
                 if (text.ToLower().Contains("raiseskill vitality"))
                     AttributeOverWriteOnLoad.applyChangedValues(Player.m_localPlayer);
             }
-            //    private static bool Prefix(Terminal __instance)
-            //    {
-            //        string text = __instance.m_input.text;
-            //        if (text.ToLower().Equals("VitalityRewrite reload"))
-            //        {
-            //            _instance.Config.Reload();
-            //            WeatherPatch.ReApply();
-            //            Traverse.Create(__instance).Method("AddString", new object[]
-            //            {
-            //                text
-            //            }).GetValue();
-            //            Traverse.Create(__instance).Method("AddString", new object[]
-            //            {
-            //                "Weather Tweaks config reloaded"
-            //            }).GetValue();
-            //            return false;
-            //        }
-            //        else if (text.ToLower().Equals("VitalityRewrite apply"))
-            //        {
-            //            WeatherPatch.ReApply();
-            //            _instance.Config.SaveShort();
-            //            Traverse.Create(__instance).Method("AddString", new object[]
-            //            {
-            //                text
-            //            }).GetValue();
-            //            Traverse.Create(__instance).Method("AddString", new object[]
-            //            {
-            //                "Weather Tweaks config applied"
-            //            }).GetValue();
-            //            return false;
-            //        }
-            //        return true;
-            //    }
-            //}
-            //[HarmonyPatch(typeof(Terminal), "InitTerminal")]
-            //public static class TerminalInitConsole_Patch
-            //{
-            //    private static void Postfix()
-            //    {
-            //        new Terminal.ConsoleCommand("VitalityRewrite", "with keyword 'reload': Reload config of VitalityRewrite. With keyword 'apply': Apply changes done in-game (Configuration Manager)", null);
-            //    }
-            //}
-
+            private static bool Prefix(Terminal __instance)
+            {
+                string text = __instance.m_input.text;
+                if (text.ToLower().Equals("vitalityrewrite reload"))
+                {
+                    _instance.Config.Reload();
+                    foreach (var player in Player.GetAllPlayers())
+                        AttributeOverWriteOnLoad.applyChangedValues(player);
+                    Traverse.Create(__instance).Method("AddString", new object[]
+                    {
+                            text
+                    }).GetValue();
+                    Traverse.Create(__instance).Method("AddString", new object[]
+                    {
+                            "Vitality rewrite config reloaded"
+                    }).GetValue();
+                    return false;
+                }
+                else if (text.ToLower().Equals("vitalityrewrite apply"))
+                {
+                    foreach (var player in Player.GetAllPlayers())
+                        AttributeOverWriteOnLoad.applyChangedValues(player);
+                    Traverse.Create(__instance).Method("AddString", new object[]
+                    {
+                            text
+                    }).GetValue();
+                    Traverse.Create(__instance).Method("AddString", new object[]
+                    {
+                            "Vitality rewrite config applied"
+                    }).GetValue();
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyPatch(typeof(Terminal), "InitTerminal")]
+        public static class TerminalInitConsole_Patch
+        {
+            private static void Postfix()
+            {
+                new Terminal.ConsoleCommand("vitalityrewrite", "with keyword 'reload': Reload config of VitalityRewrite. With keyword 'apply': Apply changes done in-game (Configuration Manager)", null);
+            }
         }
         public static void Log(string message)
         {
@@ -466,7 +496,7 @@ namespace VitalityRewrite
 
         public static void Increase(Player player, float value)
         {
-            player.RaiseSkill(skill, value);
+            player.RaiseSkill(skill, value*cfgSkillGainMultiplier.Value);
         }
 
         private static Sprite LoadCustomTexture(string filename)
