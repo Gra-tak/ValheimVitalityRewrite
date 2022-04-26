@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
@@ -13,6 +10,7 @@ namespace VitalityRewrite
 {
     [BepInPlugin(PluginId, "Vitality Rewrite", "1.0.0")]
     [BepInDependency("com.pipakin.SkillInjectorMod", BepInDependency.DependencyFlags.HardDependency)]
+    [BepInIncompatibility("RD_Valheim_Vitality_Mod")]
 
     //removed: self heal (the old way was stupid and the I don't want to make it the EpicLoot way to avoid a conflict. Also, faster reg is bascially the same.
     //removed: hardcore. No idea what was ever the purpose of this except for making the mod more complicated
@@ -63,9 +61,9 @@ namespace VitalityRewrite
             cfgHealthRegen = Config.Bind("Health", "RegenerationIncrease", 100f, "Increase of base health regeneration in percent at vitality skill 100. Implemented by reducing the time between regenerations accordingly. Multiplicative to other modifications.");
             cfgMaxStamina = Config.Bind("Stamina", "MaxIncrease", 40f, "Amount of additional max stamina at vitality skill 100. Additive to other modification.");
             cfgStaminaRegen = Config.Bind("Stamina", "Regeneration increase", 72f, "Increase of base stamina regeneration in percent at vitality skill 100. Multiplicative to other modifications.");
-            cfgStaminaDelay = Config.Bind("Stamina", "RegenerationDelayReduction", 50f, "Decrease the delay for stamina regeneration to start after usage in percent at vitality skill 100. Multiplicative to other modifications.");
-            cfgStaminaJump = Config.Bind("Stamina", "JumpCostReduction", 25f, "Decrease of stamina cost per jump in percent at vitality skill 100. Multiplicative to other modifications.");
-            cfgStaminaSwim = Config.Bind("Stamina", "SwimCostReduction", 33f, "Decrease of stamina cost while swimming in percent at vitality skill 100. Multiplicative to other modifications.");
+            cfgStaminaDelay = Config.Bind("Stamina", "RegenerationDelayReduction", 50f, "Decrease the delay for stamina regeneration to start after usage in percent at vitality skill 100. Be aware that at 100% or higher this means regeneration while using stamina (except swimming). Multiplicative to other modifications.");
+            cfgStaminaJump = Config.Bind("Stamina", "JumpCostReduction", 25f, "Decrease of stamina cost per jump in percent at vitality skill 100. Values above 100% have no other effects than 100%. Multiplicative to other modifications.");
+            cfgStaminaSwim = Config.Bind("Stamina", "SwimCostReduction", 33f, "Decrease of stamina cost while swimming in percent at vitality skill 100. Values above 100% means you regenerate stamina while swimming. Don't do that. Multiplicative to other modifications.");
             cfgWalkSpeed = Config.Bind("Speed", "WalkingBase", 12.5f, "Increase of base walking speed at vitality skill 100. Additive to other modification.");
             cfgRunSpeed = Config.Bind("Speed", "RunBase", 12.5f, "Increase of base running speed at vitality skill 100. Additive to other modification.");
             cfgSwimSpeed = Config.Bind("Speed", "SwimBase", 100f, "Increase of base swimming speed and swimming turning speed at vitality skill 100. Additive to other modification.");
@@ -187,7 +185,7 @@ namespace VitalityRewrite
                     {
                         Increase(__instance, 0.1f * dt);
                     }
-                    if (__instance.InWater())
+                    if (__instance.InWater() && !__instance.IsOnGround())
                     {
                         if (stamina != __instance.GetStaminaPercentage()) //make sure player is actually swimming
                         {
@@ -307,10 +305,8 @@ namespace VitalityRewrite
         {
             private static void Postfix(Player __instance, Skills.SkillType skill)
             {
-                Log("skill level up");
                 if (skill == VitalityRewrite.skill)
                 {
-                    Log("skill level up vitality");
                     AttributeOverWriteOnLoad.applyChangedValues(__instance);
                 }
             }
@@ -327,7 +323,7 @@ namespace VitalityRewrite
                 {
                     return;
                 }
-                Increase((Player)__instance, 0.15f);
+                Increase((Player)__instance, 0.14f);
             }
         }
 
@@ -343,7 +339,7 @@ namespace VitalityRewrite
                 Player player = Player.m_localPlayer;
                 float cfg = cfgPickAxe.Value;
                 hit.m_damage.m_pickaxe *= (1.0f + skillFactor * cfg / 100);
-                float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f * cfgSkillGainByWorkDamageMultiplier.Value;
+                float skillGain = 0.04f + hit.m_damage.m_pickaxe * 0.00075f * cfgSkillGainByWorkDamageMultiplier.Value; //this is lower than the others. mineRock5 usually allows you to hit multiple pieces at once and each will trigger this.
                 Increase(player,skillGain);
                 Log("(MineRock5) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString()+" damage done: "+ hit.m_damage.m_pickaxe+" skill gain: "+skillGain);
             }
