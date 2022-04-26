@@ -16,9 +16,7 @@ namespace VitalityRewrite
 
     //removed: self heal (the old way was stupid and the I don't want to make it the EpicLoot way to avoid a conflict. Also, faster reg is bascially the same.
     //removed: hardcore. No idea what was ever the purpose of this except for making the mod more complicated
-    //removed: reduced stamina cost of working as that would overwrite whatever is set for the tool....
-    //todo: increase skill modification
-    //todo: food regen timer constant read
+    //removed: reduced stamina cost of working as that would overwrite whatever is set for the tool...
     public class VitalityRewrite : BaseUnityPlugin
     {
         public const string PluginId = "VitalityRewrite";
@@ -39,6 +37,8 @@ namespace VitalityRewrite
         private static ConfigEntry<float> cfgSwimSpeed;
         private static ConfigEntry<float> cfgCarryWeight;
         private static ConfigEntry<float> cfgJumpHeight;
+        private static ConfigEntry<float> cfgTreeLogging;
+        private static ConfigEntry<float> cfgPickAxe;
 
         private static float skillFactor;
 
@@ -55,7 +55,6 @@ namespace VitalityRewrite
 
         public void Init()
         {
-            _instance.Config.SaveOnConfigSet = false;
             _loggingEnabled = Config.Bind("Logging", "Logging Enabled", true, "Enable logging.");
             cfgMaxHealth = Config.Bind("Health", "MaxIncrease", 125f, "Amount of additional max health at vitality skill 100. Additive to other modification.");
             cfgHealthRegen = Config.Bind("Health", "RegenerationIncrease", 100f, "Increase of base health regeneration in percent at vitality skill 100. Implemented by reducing the time between regenerations accordingly. Multiplicative to other modifications.");
@@ -69,6 +68,8 @@ namespace VitalityRewrite
             cfgSwimSpeed = Config.Bind("Speed", "SwimBase", 100f, "Increase of base swimming speed and swimming turning speed at vitality skill 100. Additive to other modification.");
             cfgCarryWeight = Config.Bind("Various", "Carryweight", 400f, "Amount of additional carry weight at vitality skill 100. Additive to other modification.");
             cfgJumpHeight = Config.Bind("Various", "JumpHeight", 10f, "Increase of base jump height in percent at vitality skill 100. Multiplicative to other modifications.");
+            cfgTreeLogging = Config.Bind("Various", "WoodcuttingIncrease", 25f, "Increase chop damage done to trees in percent at vitality skill 100. Multiplicative to other modifications.");
+            cfgPickAxe = Config.Bind("Various", "MiningIncrease", 25f, "Increase pickaxe damage done to stones and ores in percent at vitality skill 100. Multiplicative to other modifications.");
 
             SkillInjector.RegisterNewSkill(skillId, "Vitality", "Increase base stats", 1f, VitalityRewrite.LoadCustomTexture("heart.png"), Skills.SkillType.None);
         }
@@ -86,65 +87,16 @@ namespace VitalityRewrite
             {
                 if (___m_foodRegenTimer == 0)
                 {
-                    //float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
                     float cfg = cfgHealthRegen.Value;
                     float regenMultiplier = skillFactor * cfg / 100 + 1; //from percentage increase to unitless multiplier
                     if (regenMultiplier > 0) //-100% regeneration or lower is ignored
-                        ___m_foodRegenTimer += 10 - 10 / regenMultiplier; //converges to 10 for regenMultiplier -> infinity. Any positive finite value works.
+                        ___m_foodRegenTimer = 10 - 10 / regenMultiplier; //converges to 10 for regenMultiplier -> infinity. Any positive finite value works.
+                    //10 is a magic number if valheim source code so I can't replace it by the value from valheim unfortunately.
+
                     //Log("Health regenation value set to " + ___m_foodRegenTimer + " (out of 10)");
                 }
             }
         }
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")] // called less often then UpdateStats and that should be more than sufficient
-        //public static class StaminaRegeneration
-        //{
-        //    private static void Prefix(Player __instance, ref float ___m_staminaRegen)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        ___m_staminaRegen = 6.0f * (1.0f + skillFactor * cfg / 100); //6 is the base stamina regeneration of Valheim
-        //        Log("Stamina base regeneration set to: " + ___m_staminaRegen);
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")] // called WAY less often then FixedUpdate and that should be more than sufficient
-        //public static class StaminaRegenerationDelay
-        //{
-        //    private static void Prefix(Player __instance)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __instance.m_staminaRegenDelay = 1.0f - skillFactor * cfg / 100;
-        //        Log("Stamina regeneration delay set to: " + __instance.m_staminaRegenDelay);
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")] // called WAY less often then FixedUpdate and that should be more than sufficient
-        //public static class JumpStaminaBase
-        //{
-        //    private static void Prefix(Player __instance)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __instance.m_jumpStaminaUsage = 10.0f - skillFactor * cfg / 10;
-        //        Log("Base stamina per jump set to: " + __instance.m_jumpStaminaUsage);
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")] // called WAY less often then FixedUpdate and that should be more than sufficient
-        //public static class SwimStaminaBase
-        //{
-        //    private static void Prefix(Player __instance)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __instance.m_swimStaminaDrainMinSkill = 5.0f * (1 - skillFactor * cfg / 100);
-        //        __instance.m_swimStaminaDrainMaxSkill = 2.0f * (1 - skillFactor * cfg / 100);
-        //        Log("Base stamina for swimming set from: " + __instance.m_swimStaminaDrainMaxSkill + " to "+__instance.m_swimStaminaDrainMaxSkill);
-        //    }
-        //}
-
 
 
         [HarmonyPatch(typeof(Player), "SetMaxHealth")]
@@ -152,7 +104,6 @@ namespace VitalityRewrite
         {
             private static void Prefix(Player __instance, ref float health)
             {
-                //float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
                 float cfg = cfgMaxHealth.Value;
                 health += skillFactor * cfg;
                 //Log("Health increased by " + skillFactor * cfg);
@@ -164,7 +115,6 @@ namespace VitalityRewrite
         {
             private static void Prefix(Player __instance, ref float stamina)
             {
-                //float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
                 float cfg = cfgMaxStamina.Value;
                 stamina += skillFactor * cfg;
                 //Log("Stamina increased by " + skillFactor * cfg);
@@ -177,7 +127,6 @@ namespace VitalityRewrite
         {
             private static void Postfix(Player __instance, ref float __result)
             {
-                //float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
                 float cfg = cfgWalkSpeed.Value;
                 __result += skillFactor * cfg / 100;
                 //Log("Base walk speed increased by " + skillFactor * cfg/100);
@@ -189,61 +138,11 @@ namespace VitalityRewrite
         {
             private static void Postfix(Player __instance, ref float __result)
             {
-                //float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
                 float cfg = cfgRunSpeed.Value;
                 __result += skillFactor * cfg / 100;
                 //Log("Base run speed increased by " + skillFactor * cfg / 100);
             }
         }
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")]// called WAY less often then FixedUpdate and that should be more than sufficient
-        //public static class SwimSpeed
-        //{
-        //    private static void Prefix(Player __instance)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __instance.m_swimSpeed = 2.0f * (1 + skillFactor * cfg / 100);
-        //        __instance.m_swimTurnSpeed = 100.0f * (1 + skillFactor * cfg / 100);
-        //        Log("Base swim speed and swim turn speed increased by " + skillFactor * cfg / 100);
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")] // called WAY less often then GetMaxCarryWeight and that should be more than sufficient
-        //public static class VitalityCarryWeightIncrease
-        //{
-        //    private static void Postfix(Player __instance)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __instance.m_maxCarryWeight = 300f + skillFactor * cfg;
-        //        Log("Carry weight increased by " + skillFactor * cfg);
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(Player), "GetMaxCarryWeight")]
-        //public static class VitalityCarryWeightIncrease
-        //{
-        //    private static void Postfix(Player __instance, ref float __result)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __result += skillFactor * cfg;
-        //        Log("Carry weight increased by " + skillFactor * cfg);
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(Player), "SetMaxStamina")]// called WAY less often then FixedUpdate and that should be more than sufficient
-        //public static class JumpForce
-        //{
-        //    private static void Prefix(Player __instance)
-        //    {
-        //        float skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
-        //        float cfg = 100; //CONFIG TODO
-        //        __instance.m_jumpForce = 10.0f * (1 + skillFactor * cfg / 100);
-        //        Log("Base jump force increased by " + skillFactor * cfg / 100);
-        //    }
-        //}
 
         [HarmonyPatch(typeof(Player), "UpdateStats")]
         public static class IncreaseSkill
@@ -305,23 +204,70 @@ namespace VitalityRewrite
             {
                 skillFactor = __instance.GetSkillFactor(VitalityRewrite.skill);
                 Log("Player: " + __instance.GetPlayerName() + " has skillfactor of " + skillFactor + " applied. ");
-                float cfg = cfgJumpHeight.Value;
+                float cfg;
+
+                cfg = cfgJumpHeight.Value;
+                Log("Base jump force changed from: " + __instance.m_jumpForce);
                 __instance.m_jumpForce = AttributeOverWriteOnLoad.m_jumpForce * (1 + skillFactor * cfg / 100);
+                Log("to: " + __instance.m_jumpForce);
+
                 cfg = cfgStaminaRegen.Value;
+                Log("Stamina base regeneration changed from: " + __instance.m_staminaRegen);
                 __instance.m_staminaRegen = AttributeOverWriteOnLoad.m_staminaRegen * (1 + skillFactor * cfg / 100);
+                Log("to: " + __instance.m_staminaRegen);
+
                 cfg = cfgStaminaSwim.Value;
-                __instance.m_swimStaminaDrainMinSkill = AttributeOverWriteOnLoad.m_swimStaminaDrainMinSkill * (1 + skillFactor * cfg / 100);
-                __instance.m_swimStaminaDrainMaxSkill = AttributeOverWriteOnLoad.m_swimStaminaDrainMaxSkill * (1 + skillFactor * cfg / 100);
+                Log("Base swim stamina strain at zero skill changed from: " + __instance.m_swimStaminaDrainMinSkill);
+                __instance.m_swimStaminaDrainMinSkill = AttributeOverWriteOnLoad.m_swimStaminaDrainMinSkill * (1 - skillFactor * cfg / 100);
+                Log("to: " + __instance.m_swimStaminaDrainMinSkill);
+
+                Log("Base swim stamina strain at max skill changed from: " + __instance.m_swimStaminaDrainMaxSkill);
+                __instance.m_swimStaminaDrainMaxSkill = AttributeOverWriteOnLoad.m_swimStaminaDrainMaxSkill * (1 - skillFactor * cfg / 100);
+                Log("to: " + __instance.m_swimStaminaDrainMaxSkill);
+
                 cfg = cfgCarryWeight.Value;
+                Log("Base carry weight changed from: " + __instance.m_maxCarryWeight);
                 __instance.m_maxCarryWeight = AttributeOverWriteOnLoad.m_maxCarryWeight + skillFactor * cfg;
+                Log("to: " + __instance.m_maxCarryWeight);
+
                 cfg = cfgStaminaJump.Value;
+                Log("Base jump stamina use changed from: " + __instance.m_jumpStaminaUsage);
                 __instance.m_jumpStaminaUsage = AttributeOverWriteOnLoad.m_jumpStaminaUsage * (1 - skillFactor * cfg / 100);
+                Log("to: " + __instance.m_jumpStaminaUsage);
+
                 cfg = cfgStaminaDelay.Value;
+                Log("Base stamina regeneration delay changed from: " + __instance.m_staminaRegenDelay);
                 __instance.m_staminaRegenDelay = AttributeOverWriteOnLoad.m_staminaRegenDelay * (1 - skillFactor * cfg / 100);
+                Log("to: " + __instance.m_staminaRegenDelay);
+
                 cfg = cfgSwimSpeed.Value;
+                Log("Base swim speed changed from: " + __instance.m_swimSpeed);
                 __instance.m_swimSpeed = AttributeOverWriteOnLoad.m_swimSpeed * (1 + skillFactor * cfg / 100);
+                Log("to: " + __instance.m_swimSpeed);
+
+                Log("Base swim turning speed changed from: " + __instance.m_swimTurnSpeed);
                 __instance.m_swimTurnSpeed = AttributeOverWriteOnLoad.m_swimTurnSpeed * (1 + skillFactor * cfg / 100);
-                Log("m_jumpForce: " + m_jumpForce);
+                Log("to: " + __instance.m_swimTurnSpeed);
+
+                if (_loggingEnabled.Value)
+                {
+                    //these need to be changed elsewhere (more regularly), yet we do the debug output here to prevent spam.
+                    cfg = cfgHealthRegen.Value;
+                    float regenMultiplier = skillFactor * cfg / 100 + 1;
+                    Log("Health regenation value set to " + (10 - 10 / regenMultiplier) + " (out of 10) whenever it reaches zero");
+
+                    cfg = cfgMaxHealth.Value;
+                    Log("Health increased by " + skillFactor * cfg);
+
+                    cfg = cfgMaxStamina.Value;
+                    Log("Stamina increased by " + skillFactor * cfg);
+
+                    cfg = cfgWalkSpeed.Value;
+                    Log("Base walk speed increased by " + skillFactor * cfg + "%");
+
+                    cfg = cfgRunSpeed.Value;
+                    Log("Base run speed increased by " + skillFactor * cfg + "%");
+                }
             }
         }
 
@@ -364,11 +310,11 @@ namespace VitalityRewrite
                     return;
                 }
                 Player player = Player.m_localPlayer;
-                //float skillFactor = player.GetSkillFactor(VitalityRewrite.skill);
-                float cfg = 100; //CONFIG TODO
+                float cfg = cfgPickAxe.Value;
                 hit.m_damage.m_pickaxe *= (1.0f + skillFactor * cfg / 100);
-                Increase(player, 0.1f + hit.m_damage.m_pickaxe * 0.001f);
-                Log("(MineRock5) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString());
+                float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f;
+                Increase(player,skillGain);
+                Log("(MineRock5) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString()+" damage done: "+ hit.m_damage.m_pickaxe+" skill gain: "+skillGain);
             }
         }
 
@@ -384,19 +330,19 @@ namespace VitalityRewrite
                 Player player = Player.m_localPlayer;
                 if (__instance.name.ToLower().Contains("rock") && hit.m_skill == Skills.SkillType.Pickaxes)
                 {
-                    //float skillFactor = player.GetSkillFactor(VitalityRewrite.skill);
-                    float cfg = 100; //CONFIG TODO
+                    float cfg = cfgPickAxe.Value;
                     hit.m_damage.m_pickaxe *= (1.0f + skillFactor * cfg / 100);
-                    Increase(player, 0.1f + hit.m_damage.m_pickaxe * 0.001f);
-                    Log("(Destructible) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString());
+                    float skillGain = 0.1f + hit.m_damage.m_pickaxe * 0.001f;
+                    Increase(player, skillGain);
+                    Log("(Destructible) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_pickaxe + " skill gain: " + skillGain);
                 }
                 else if (hit.m_skill == Skills.SkillType.WoodCutting)
                 {
-                    //float skillFactor = player.GetSkillFactor(VitalityRewrite.skill);
-                    float cfg = 100; //CONFIG TODO
+                    float cfg = cfgTreeLogging.Value;
                     hit.m_damage.m_chop *= (1.0f + skillFactor * cfg / 100);
-                    Increase(player, 0.1f + hit.m_damage.m_chop * 0.001f);
-                    Log("(Destructible) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString());
+                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f;
+                    Increase(player, skillGain);
+                    Log("(Destructible) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_chop + " skill gain: " + skillGain);
                 }
             }
         }
@@ -414,11 +360,11 @@ namespace VitalityRewrite
                 Player player = Player.m_localPlayer;
                 if (hit.m_skill == Skills.SkillType.WoodCutting && hit.m_toolTier >= __instance.m_minToolTier)
                 {
-                    //float skillFactor = player.GetSkillFactor(VitalityRewrite.skill);
-                    float cfg = 100; //CONFIG TODO
+                    float cfg = cfgTreeLogging.Value;
                     hit.m_damage.m_chop *= (1.0f + skillFactor * cfg / 100);
-                    Increase(player, 0.1f + hit.m_damage.m_chop * 0.001f);
-                    Log("(TreeBase) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString());
+                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f;
+                    Increase(player, skillGain);
+                    Log("(TreeBase) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_chop + " skill gain: " + skillGain);
                 }
             }
         }
@@ -436,11 +382,11 @@ namespace VitalityRewrite
                 Player player = Player.m_localPlayer;
                 if (hit.m_skill == Skills.SkillType.WoodCutting && hit.m_toolTier >= __instance.m_minToolTier)
                 {
-                    //float skillFactor = player.GetSkillFactor(VitalityRewrite.skill);
-                    float cfg = 100; //CONFIG TODO
+                    float cfg = cfgTreeLogging.Value;
                     hit.m_damage.m_chop *= (1.0f + skillFactor * cfg / 100);
-                    Increase(player, 0.1f + hit.m_damage.m_chop * 0.001f);
-                    Log("(TreeLog) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString());
+                    float skillGain = 0.1f + hit.m_damage.m_chop * 0.001f;
+                    Increase(player, skillGain);
+                    Log("(TreeLog) Player: " + player.GetPlayerName() + " hit on: " + __instance.name + " used Skill: " + hit.m_skill.ToString() + " damage done: " + hit.m_damage.m_chop + " skill gain: " + skillGain);
                 }
             }
         }
