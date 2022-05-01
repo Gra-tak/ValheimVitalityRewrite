@@ -36,6 +36,7 @@ namespace VitalityRewrite
         private static ConfigEntry<float> cfgCarryWeight;
         private static ConfigEntry<float> cfgJumpHeight;
         private static ConfigEntry<float> cfgFallDamage;
+        private static ConfigEntry<bool> cfgDoubleJumpFallDamageReset;
         private static ConfigEntry<float> cfgTreeLogging;
         private static ConfigEntry<float> cfgPickAxe;
         private static ConfigEntry<float> cfgSkillGainMultiplier;
@@ -70,6 +71,7 @@ namespace VitalityRewrite
             cfgCarryWeight = Config.Bind("Various", "Carryweight", 400f, "Amount of additional carry weight at vitality skill 100. Additive to other modification.");
             cfgJumpHeight = Config.Bind("Various", "JumpHeight", 10f, "Increase of base jump height in percent at vitality skill 100. Multiplicative to other modifications.");
             cfgFallDamage = Config.Bind("Various", "FallDamageReduction", 10f, "Reduces the fall height and thus fall damage in percent at vitality skill 100. Multiplicative to other modifications.");
+            cfgDoubleJumpFallDamageReset = Config.Bind("Various", "DoubleJumpFallDamageReset", true, "Set the current fall height to zero whenever a successful jump is performed. No effect without a mod that allows jumping in the air, like EpicLoot Double-/Air-Jump.");
             cfgTreeLogging = Config.Bind("Various", "WoodcuttingIncrease", 25f, "Increase chop damage done to trees in percent at vitality skill 100. Multiplicative to other modifications.");
             cfgPickAxe = Config.Bind("Various", "MiningIncrease", 25f, "Increase pickaxe damage done to stones and ores in percent at vitality skill 100. Multiplicative to other modifications.");
             cfgSkillGainMultiplier = Config.Bind("SkillGain", "GeneralMultiplier", 1f, "Multiplier determining how fast skill is gained. Higher values increase skill gain.");
@@ -150,7 +152,6 @@ namespace VitalityRewrite
         [HarmonyPatch(typeof(Character), "UpdateGroundContact")]
         public static class FallDamageReduction
         {
-            // Token: 0x06000013 RID: 19 RVA: 0x00002C90 File Offset: 0x00000E90
             private static void Prefix(Character __instance, ref float ___m_maxAirAltitude, bool ___m_groundContact)
             {
                 if (!__instance.IsPlayer() || !___m_groundContact)
@@ -173,10 +174,23 @@ namespace VitalityRewrite
             }
         }
 
+        [HarmonyPatch(typeof(Player), nameof(Player.OnJump))]
+        public static class FallDamageReductionDoubleJump
+        {
+            public static void Postfix(Player __instance, ref float ___m_maxAirAltitude)
+            {
+                Log("___m_maxAirAltitude: " + ___m_maxAirAltitude);
+                if (__instance.IsPlayer() && cfgDoubleJumpFallDamageReset.Value)
+                {
+                    ___m_maxAirAltitude = __instance.transform.position.y;
+                    Log("___m_maxAirAltitude after: " + ___m_maxAirAltitude);
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(Player), "UpdateStats")]
         public static class IncreaseSkill
         {
-            // Token: 0x06000014 RID: 20 RVA: 0x00002CFC File Offset: 0x00000EFC
             private static void Prefix(Player __instance, float dt)
             {
                 if (!__instance.IsFlying())
@@ -196,7 +210,6 @@ namespace VitalityRewrite
                 }
             }
 
-            // Token: 0x0400002D RID: 45
             private static float stamina;
         }
 
