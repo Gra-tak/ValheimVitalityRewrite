@@ -336,7 +336,8 @@ namespace VitalityRewrite
                 {
                     return;
                 }
-                Increase((Player)__instance, 0.14f);
+                if (__instance.IsOnGround() && !__instance.IsDead() && !__instance.InAttack() && !__instance.IsEncumbered() && !__instance.InDodge() && !__instance.IsKnockedBack() && !__instance.IsStaggering() && __instance.HaveStamina(__instance.m_jumpStaminaUsage))
+                    Increase((Player)__instance, 0.14f);
             }
         }
 
