@@ -433,7 +433,6 @@ namespace VitalityRewrite
         }
 
 
-        /*
         [HarmonyPatch(typeof(Terminal), "InputText")]
         private static class InputText_Patch
         {
@@ -486,7 +485,7 @@ namespace VitalityRewrite
                 new Terminal.ConsoleCommand("vitalityrewrite", "with keyword 'reload': Reload config of VitalityRewrite. With keyword 'apply': Apply changes done in-game (Configuration Manager)", null);
             }
         }
-        */
+        
         public static void Log(string message)
         {
             if (_loggingEnabled.Value)
