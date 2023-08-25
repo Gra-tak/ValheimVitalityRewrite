@@ -5,6 +5,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 using Pipakin.SkillInjectorMod;
+using System;
 
 namespace VitalityRewrite
 {
@@ -103,11 +104,10 @@ namespace VitalityRewrite
             }
         }
 
-
         [HarmonyPatch(typeof(Player), "SetMaxHealth")]
         public static class MaxHealth
         {
-            private static void Prefix(Player __instance, ref float health)
+            private static void Prefix(Player __instance, ref float health, bool flashBar)
             {
                 float cfg = cfgMaxHealth.Value;
                 health += skillFactor * cfg;
@@ -118,7 +118,7 @@ namespace VitalityRewrite
         [HarmonyPatch(typeof(Player), "SetMaxStamina")]
         public static class MaxStamina
         {
-            private static void Prefix(Player __instance, ref float stamina)
+            private static void Prefix(Player __instance, ref float stamina, bool flashBar)
             {
                 float cfg = cfgMaxStamina.Value;
                 stamina += skillFactor * cfg;
@@ -152,7 +152,7 @@ namespace VitalityRewrite
         [HarmonyPatch(typeof(Character), "UpdateGroundContact")]
         public static class FallDamageReduction
         {
-            private static void Prefix(Character __instance, ref float ___m_maxAirAltitude, bool ___m_groundContact)
+            private static void Prefix(Character __instance, float dt, ref float ___m_maxAirAltitude, bool ___m_groundContact)
             {
                 if (!__instance.IsPlayer() || !___m_groundContact)
                 {
@@ -188,7 +188,7 @@ namespace VitalityRewrite
             }
         }
 
-        [HarmonyPatch(typeof(Player), "UpdateStats")]
+        [HarmonyPatch(typeof(Player), "UpdateStats", new Type[] { typeof(float) })]
         public static class IncreaseSkill
         {
             private static void Prefix(Player __instance, float dt)
@@ -228,7 +228,7 @@ namespace VitalityRewrite
             //private static void Prefix(Player __instance)
             //{
             //}
-            private static void Postfix(Player __instance)
+            private static void Postfix(Player __instance, ZPackage pkg)
             {
                 AttributeOverWriteOnLoad.m_jumpForce = __instance.m_jumpForce;
                 AttributeOverWriteOnLoad.m_staminaRegen = __instance.m_staminaRegen;
@@ -316,7 +316,7 @@ namespace VitalityRewrite
         [HarmonyPatch(typeof(Player), "OnSkillLevelup")]
         public static class LevelUpSkillApplyValues
         {
-            private static void Postfix(Player __instance, Skills.SkillType skill)
+            private static void Postfix(Player __instance, Skills.SkillType skill, float level)
             {
                 if (skill == VitalityRewrite.skill)
                 {
@@ -330,7 +330,7 @@ namespace VitalityRewrite
         [HarmonyPatch(typeof(Character), "Jump")]
         public static class VitalitySkillOnJump
         {
-            private static void Prefix(Character __instance)
+            private static void Prefix(Character __instance, bool force)
             {
                 if (!__instance.IsPlayer())
                 {
@@ -433,7 +433,7 @@ namespace VitalityRewrite
         }
 
 
-
+        /*
         [HarmonyPatch(typeof(Terminal), "InputText")]
         private static class InputText_Patch
         {
@@ -486,6 +486,7 @@ namespace VitalityRewrite
                 new Terminal.ConsoleCommand("vitalityrewrite", "with keyword 'reload': Reload config of VitalityRewrite. With keyword 'apply': Apply changes done in-game (Configuration Manager)", null);
             }
         }
+        */
         public static void Log(string message)
         {
             if (_loggingEnabled.Value)
