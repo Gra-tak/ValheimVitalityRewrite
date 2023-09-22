@@ -197,20 +197,28 @@ namespace VitalityRewrite
                 {
                     if (__instance.IsRunning() && __instance.IsOnGround())
                     {
-                        Increase(__instance, 0.1f * dt);
+                        runSwimSkill += 0.1f * dt;
+                        // Increase(__instance, 0.1f * dt);
                     }
                     if (__instance.InWater() && !__instance.IsOnGround())
                     {
                         if (stamina != __instance.GetStaminaPercentage()) //make sure player is actually swimming
                         {
-                            Increase(__instance, 0.25f * dt);
+                            runSwimSkill += 0.25f * dt;
+                            // Increase(__instance, 0.25f * dt);
                         }
                         stamina = __instance.GetStaminaPercentage();
+                    }
+                    if (runSwimSkill >= 1.0f)
+                    {
+                        Increase(__instance, runSwimSkill);
+                        runSwimSkill = 0.0f;
                     }
                 }
             }
 
             private static float stamina;
+            private static float runSwimSkill = 0.0f;
         }
 
         [HarmonyPatch(typeof(Player), "Load")]
