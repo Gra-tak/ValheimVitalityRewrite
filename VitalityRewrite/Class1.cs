@@ -363,17 +363,15 @@ namespace VitalityRewrite
 
 
 
-        [HarmonyPatch(typeof(Character), "Jump")]
+        [HarmonyPatch(typeof(Player), nameof(Player.OnJump))]
         public static class VitalitySkillOnJump
         {
-            private static void Prefix(Character __instance, bool force)
+            private static void Prefix(Player __instance, float ___m_equipmentMovementModifier)
             {
-                if (!__instance.IsPlayer())
-                {
-                    return;
-                }
-                if (__instance.IsOnGround() && !__instance.IsDead() && !__instance.InAttack() && !__instance.IsEncumbered() && !__instance.InDodge() && !__instance.IsKnockedBack() && !__instance.IsStaggering() && __instance.HaveStamina(__instance.m_jumpStaminaUsage))
-                    Increase((Player)__instance, 0.14f);
+                float num = __instance.m_jumpStaminaUsage - __instance.m_jumpStaminaUsage * ___m_equipmentMovementModifier;
+                bool b = __instance.HaveStamina(num * Game.m_moveStaminaRate );
+                if (b)
+                    Increase(__instance, 0.14f);
             }
         }
 
