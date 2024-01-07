@@ -27,7 +27,9 @@ namespace VitalityRewrite
         private static ConfigEntry<float> cfgMaxHealth;
         private static ConfigEntry<float> cfgHealthRegen;
         private static ConfigEntry<float> cfgMaxStamina;
+        private static ConfigEntry<float> cfgMaxEitr;
         private static ConfigEntry<float> cfgStaminaRegen;
+        private static ConfigEntry<float> cfgEitrRegen;
         private static ConfigEntry<float> cfgStaminaDelay;
         private static ConfigEntry<float> cfgStaminaJump;
         private static ConfigEntry<float> cfgStaminaSwim;
@@ -62,7 +64,9 @@ namespace VitalityRewrite
             cfgMaxHealth = Config.Bind("Health", "MaxIncrease", 125f, "Amount of additional max health at vitality skill 100. Additive to other modification.");
             cfgHealthRegen = Config.Bind("Health", "RegenerationIncrease", 100f, "Increase of base health regeneration in percent at vitality skill 100. Implemented by reducing the time between regenerations accordingly. Multiplicative to other modifications.");
             cfgMaxStamina = Config.Bind("Stamina", "MaxIncrease", 40f, "Amount of additional max stamina at vitality skill 100. Additive to other modification.");
+            cfgMaxEitr = Config.Bind("Eitr", "MaxIncrease", 40f, "Amount of additional max Eitr at vitality skill 100. Only active if the food Eitr is above zero. Additive to other modification.");
             cfgStaminaRegen = Config.Bind("Stamina", "Regeneration increase", 72f, "Increase of base stamina regeneration in percent at vitality skill 100. Multiplicative to other modifications.");
+            cfgEitrRegen = Config.Bind("Eitr", "Regeneration increase", 72f, "Increase of base eitr regeneration in percent at vitality skill 100. Multiplicative to other modifications.");
             cfgStaminaDelay = Config.Bind("Stamina", "RegenerationDelayReduction", 50f, "Decrease the delay for stamina regeneration to start after usage in percent at vitality skill 100. Be aware that at 100% or higher this means regeneration while using stamina (except swimming). Multiplicative to other modifications.");
             cfgStaminaJump = Config.Bind("Stamina", "JumpCostReduction", 25f, "Decrease of stamina cost per jump in percent at vitality skill 100. Values above 100% have no other effects than 100%. Multiplicative to other modifications.");
             cfgStaminaSwim = Config.Bind("Stamina", "SwimCostReduction", 33f, "Decrease of stamina cost while swimming in percent at vitality skill 100. Values above 100% means you regenerate stamina while swimming. Don't do that. Multiplicative to other modifications.");
@@ -123,6 +127,20 @@ namespace VitalityRewrite
                 float cfg = cfgMaxStamina.Value;
                 stamina += skillFactor * cfg;
                 //Log("Stamina increased by " + skillFactor * cfg);
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), "SetMaxEitr")]
+        public static class MaxEitr
+        {
+            private static void Prefix(Player __instance, ref float eitr, bool flashBar)
+            {
+                if (eitr > 0)
+                {
+                    float cfg = cfgMaxEitr.Value;
+                    eitr += skillFactor * cfg;
+                    //Log("Eitr increased by " + skillFactor * cfg);
+                }
             }
         }
 
@@ -229,6 +247,7 @@ namespace VitalityRewrite
             private static float m_jumpStaminaUsage;
             private static float m_staminaRegenDelay;
             private static float m_staminaRegen;
+            private static float m_eitrRegen;
             private static float m_swimStaminaDrainMinSkill;
             private static float m_swimStaminaDrainMaxSkill;
             private static float m_swimSpeed;
@@ -240,6 +259,7 @@ namespace VitalityRewrite
             {
                 AttributeOverWriteOnLoad.m_jumpForce = __instance.m_jumpForce;
                 AttributeOverWriteOnLoad.m_staminaRegen = __instance.m_staminaRegen;
+                AttributeOverWriteOnLoad.m_eitrRegen = __instance.m_eiterRegen;
                 AttributeOverWriteOnLoad.m_swimStaminaDrainMinSkill = __instance.m_swimStaminaDrainMinSkill;
                 AttributeOverWriteOnLoad.m_swimStaminaDrainMaxSkill = __instance.m_swimStaminaDrainMaxSkill;
                 AttributeOverWriteOnLoad.m_maxCarryWeight = __instance.m_maxCarryWeight;
@@ -265,6 +285,11 @@ namespace VitalityRewrite
                 Log("Stamina base regeneration changed from: " + __instance.m_staminaRegen);
                 __instance.m_staminaRegen = AttributeOverWriteOnLoad.m_staminaRegen * (1 + skillFactor * cfg / 100);
                 Log("to: " + __instance.m_staminaRegen);
+
+                cfg = cfgEitrRegen.Value;
+                Log("Eitr base regeneration changed from: " + __instance.m_eiterRegen);
+                __instance.m_eiterRegen = AttributeOverWriteOnLoad.m_eitrRegen * (1 + skillFactor * cfg / 100);
+                Log("to: " + __instance.m_eiterRegen);
 
                 cfg = cfgStaminaSwim.Value;
                 Log("Base swim stamina strain at zero skill changed from: " + __instance.m_swimStaminaDrainMinSkill);
@@ -311,6 +336,9 @@ namespace VitalityRewrite
 
                     cfg = cfgMaxStamina.Value;
                     Log("Stamina increased by " + skillFactor * cfg);
+
+                    cfg = cfgMaxEitr.Value;
+                    Log("Eitr increased by " + skillFactor * cfg);
 
                     cfg = cfgWalkSpeed.Value;
                     Log("Base walk speed increased by " + skillFactor * cfg + "%");
