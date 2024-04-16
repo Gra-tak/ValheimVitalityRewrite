@@ -36,15 +36,17 @@
     <Reference Include="0Harmony">
       <HintPath>C:\ValheimFiles\core\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="assembly_valheim_publicized, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Z:\Managed\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
+    <Reference Include="assembly_valheim" Publicize="true">
+      <HintPath>C:\ValheimFiles\Managed\assembly_valheim.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
       <HintPath>C:\ValheimFiles\core\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="gui_framework">
+      <HintPath>C:\ValheimFiles\Managed\gui_framework.dll</HintPath>
+    </Reference>
     <Reference Include="SkillInjector">
-      <HintPath>..\..\..\..\..\..\ValheimFiles\SkillInjector.dll</HintPath>
+      <HintPath>C:\ValheimFiles\SkillInjector.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -55,27 +57,27 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="ui_lib">
-      <HintPath>Z:\Managed\ui_lib.dll</HintPath>
+    <Reference Include="Unity.InputSystem.ForUI">
+      <HintPath>C:\ValheimFiles\Managed\Unity.InputSystem.ForUI.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
-      <HintPath>Z:\Managed\Unity.TextMeshPro.dll</HintPath>
+      <HintPath>C:\ValheimFiles\Managed\Unity.TextMeshPro.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>C:\ValheimFiles\unstripped_corlib\UnityEngine.dll</HintPath>
+      <HintPath>C:\ValheimFiles\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>C:\ValheimFiles\unstripped_corlib\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>C:\ValheimFiles\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>..\..\..\..\..\..\ValheimFiles\unstripped_corlib\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>C:\ValheimFiles\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\ValheimFiles\unstripped_corlib\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <HintPath>C:\ValheimFiles\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\..\..\..\..\ValheimFiles\unstripped_corlib\UnityEngine.UI.dll</HintPath>
+      <HintPath>C:\ValheimFiles\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -95,6 +97,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\heart.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

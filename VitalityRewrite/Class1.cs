@@ -380,11 +380,11 @@ namespace VitalityRewrite
         {
             private static void Prefix(MineRock5 __instance, HitData hit, float __state)
             {
-                if (!(Player.m_localPlayer.GetZDOID() == hit.m_attacker) || hit.m_skill != Skills.SkillType.Pickaxes)
+                Player player = Player.m_localPlayer;
+                if (( player == null ) || !(player.GetZDOID() == hit.m_attacker) || hit.m_skill != Skills.SkillType.Pickaxes)
                 {
                     return;
                 }
-                Player player = Player.m_localPlayer;
                 float cfg = cfgPickAxe.Value;
                 hit.m_damage.m_pickaxe *= (1.0f + skillFactor * cfg / 100);
                 float skillGain = 0.04f + hit.m_damage.m_pickaxe * 0.00075f * cfgSkillGainByWorkDamageMultiplier.Value; //this is lower than the others. mineRock5 usually allows you to hit multiple pieces at once and each will trigger this.
@@ -398,11 +398,11 @@ namespace VitalityRewrite
         {
             private static void Prefix(Destructible __instance, HitData hit)
             {
-                if (!(Player.m_localPlayer.GetZDOID() == hit.m_attacker))
+                Player player = Player.m_localPlayer;
+                if (( player == null ) || !(player.GetZDOID() == hit.m_attacker))
                 {
                     return;
                 }
-                Player player = Player.m_localPlayer;
                 if (__instance.name.ToLower().Contains("rock") && hit.m_skill == Skills.SkillType.Pickaxes)
                 {
                     float cfg = cfgPickAxe.Value;
@@ -428,11 +428,11 @@ namespace VitalityRewrite
             // Token: 0x06000021 RID: 33 RVA: 0x000038A8 File Offset: 0x00001AA8
             private static void Prefix(TreeBase __instance, HitData hit)
             {
-                if (!(Player.m_localPlayer.GetZDOID() == hit.m_attacker))
+                Player player = Player.m_localPlayer;
+                if (( player == null ) || !(player.GetZDOID() == hit.m_attacker))
                 {
                     return;
                 }
-                Player player = Player.m_localPlayer;
                 if (hit.m_skill == Skills.SkillType.WoodCutting && hit.m_toolTier >= __instance.m_minToolTier)
                 {
                     float cfg = cfgTreeLogging.Value;
@@ -450,11 +450,11 @@ namespace VitalityRewrite
             // Token: 0x06000022 RID: 34 RVA: 0x00003AB0 File Offset: 0x00001CB0
             private static void Prefix(TreeLog __instance, HitData hit)
             {
-                if (!(Player.m_localPlayer.GetZDOID() == hit.m_attacker))
+                Player player = Player.m_localPlayer;
+                if (( player == null ) || !(player.GetZDOID() == hit.m_attacker))
                 {
                     return;
                 }
-                Player player = Player.m_localPlayer;
                 if (hit.m_skill == Skills.SkillType.WoodCutting && hit.m_toolTier >= __instance.m_minToolTier)
                 {
                     float cfg = cfgTreeLogging.Value;
@@ -473,7 +473,7 @@ namespace VitalityRewrite
             private static void Postfix(Terminal __instance)
             {
                 string text = __instance.m_input.text;
-                if (text.ToLower().Contains("raiseskill vitality"))
+                if (text.ToLower().Contains("raiseskill vitality") && ( Player.m_localPlayer != null ) )
                     AttributeOverWriteOnLoad.applyChangedValues(Player.m_localPlayer);
             }
             private static bool Prefix(Terminal __instance)
