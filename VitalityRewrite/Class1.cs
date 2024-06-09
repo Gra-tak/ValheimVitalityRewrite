@@ -366,9 +366,9 @@ namespace VitalityRewrite
         [HarmonyPatch(typeof(Player), nameof(Player.OnJump))]
         public static class VitalitySkillOnJump
         {
-            private static void Prefix(Player __instance, float ___m_equipmentMovementModifier)
+            private static void Prefix(Player __instance)
             {
-                float num = __instance.m_jumpStaminaUsage - __instance.m_jumpStaminaUsage * ___m_equipmentMovementModifier;
+                float num = __instance.m_jumpStaminaUsage - __instance.m_jumpStaminaUsage * __instance.GetEquipmentJumpStaminaModifier();
                 bool b = __instance.HaveStamina(num * Game.m_moveStaminaRate );
                 if (b)
                     Increase(__instance, 0.14f);
