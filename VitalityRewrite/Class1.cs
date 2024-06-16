@@ -9,7 +9,7 @@ using System;
 
 namespace VitalityRewrite
 {
-    [BepInPlugin(PluginId, "Vitality Rewrite", "1.0.0")]
+    [BepInPlugin(PluginId, "Vitality Rewrite", "1.2.5")]
     [BepInDependency("com.pipakin.SkillInjectorMod", BepInDependency.DependencyFlags.HardDependency)]
     [BepInIncompatibility("RD_Valheim_Vitality_Mod")]
 
